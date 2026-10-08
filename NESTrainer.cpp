@@ -159,19 +159,27 @@ BattleStats NESTrainer::simulateSingleBattle(
     int archersLost = 15 - stats.archersRemaining;
     int pikemenLost = 2 - stats.pikemenRemaining;
 
-    // Функция вознаграждения
-    float reward = (stats.zombiesKilled * 15.0f)
-                 - (archersLost * 100.0f)
-                 - (pikemenLost * 2.0f)
-                 - (stats.roundsPlayed * 1.5f);
+    // Гладкая прогрессивная функция вознаграждения:
+    // 1. Убитые зомби (главный драйвер обучения: каждый убитый зомби дает +40 очков)
+    float reward = static_cast<float>(stats.zombiesKilled) * 40.0f;
 
+    // 2. Сохранение численности лучников (+30 за каждого выжившего лучника)
+    reward += static_cast<float>(stats.archersRemaining) * 30.0f;
+
+    // 3. Выживаемость по времени: награда за раунды кайта (каждый раунд выживания лучников ценен!)
+    reward += static_cast<float>(stats.roundsPlayed) * 10.0f;
+
+    // 4. Потери пикинеров-приманок (небольшой штраф, так как их задача — размен)
+    reward -= static_cast<float>(pikemenLost) * 5.0f;
+
+    // 5. Джекпоты за победу и чистую победу
     if (stats.zeroLossArchers)
     {
-        reward += 500.0f; // Главный джекпот за чистую победу без потерь!
+        reward += 600.0f; // Главный джекпот за чистую победу без потерь!
     }
     if (stats.victory)
     {
-        reward += 200.0f;
+        reward += 300.0f;
     }
 
     stats.reward = reward;

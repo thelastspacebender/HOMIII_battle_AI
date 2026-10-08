@@ -25,20 +25,23 @@ int main()
               << " | Reward: " << baseline.reward
               << " | Zero Loss: " << (baseline.zeroLossArchers ? "YES" : "NO") << std::endl;
 
-    // Run 10 training epochs
-    std::cout << "\n[2] Starting NES + Adam Optimization (10 Epochs)..." << std::endl;
-    // PopSize = 8 for fast headless verification
-    NESTrainer trainer(brain, 0.05f, 0.1f, 8);
+    // Run 100 training epochs
+    std::cout << "\n[2] Starting NES + Adam Optimization (100 Epochs, PopSize=16)..." << std::endl;
+    NESTrainer trainer(brain, 0.08f, 0.15f, 16);
 
-    for (int epoch = 1; epoch <= 10; ++epoch)
+    for (int epoch = 1; epoch <= 100; ++epoch)
     {
         TrainingEpochStats stats = trainer.trainEpoch(epoch);
-        std::cout << "  Epoch " << std::setw(2) << epoch
-                  << " | Reward: " << std::setw(6) << std::fixed << std::setprecision(1) << stats.meanReward
-                  << " | WinRate: " << std::setw(4) << std::fixed << std::setprecision(2) << stats.winRate * 100.0f << "%"
-                  << " | ZeroLoss: " << std::setw(4) << std::fixed << std::setprecision(2) << stats.zeroLossRate * 100.0f << "%"
-                  << " | BaitW: " << std::fixed << std::setprecision(2) << stats.currentWeights.w_bait_diversion
-                  << " | KiteW: " << std::fixed << std::setprecision(2) << stats.currentWeights.w_kite_distance << std::endl;
+        if (epoch % 10 == 0 || epoch == 1 || stats.winRate > 0.0f)
+        {
+            std::cout << "  Epoch " << std::setw(3) << epoch
+                      << " | Reward: " << std::setw(6) << std::fixed << std::setprecision(1) << stats.meanReward
+                      << " | WinRate: " << std::setw(5) << std::fixed << std::setprecision(1) << stats.winRate * 100.0f << "%"
+                      << " | ZeroLoss: " << std::setw(5) << std::fixed << std::setprecision(1) << stats.zeroLossRate * 100.0f << "%"
+                      << " | BaitW: " << std::fixed << std::setprecision(2) << stats.currentWeights.w_bait_diversion
+                      << " | KiteW: " << std::fixed << std::setprecision(2) << stats.currentWeights.w_kite_distance
+                      << " | DmgW: " << std::fixed << std::setprecision(2) << stats.currentWeights.w_dmg_dealt << std::endl;
+        }
 
         assert(!std::isnan(stats.meanReward));
     }

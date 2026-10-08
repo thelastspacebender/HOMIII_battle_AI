@@ -351,7 +351,7 @@ public:
 
     void runTrain(int epochs)
     {
-        NESTrainer trainer(brain, 0.05f, 0.1f, 8);
+        NESTrainer trainer(brain, 0.08f, 0.15f, 16);
         for (int e = 1; e <= epochs; ++e)
         {
             TrainingEpochStats stats = trainer.trainEpoch(e);

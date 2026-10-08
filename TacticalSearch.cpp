@@ -284,7 +284,19 @@ void TacticalSearch::evaluateFeatures(
                 BattleHex targetCoord(dst);
                 float sanctuaryPenalty = (targetCoord.y <= 3) ? -200.0f : 30.0f;
 
-                eval.baitScore = (aggroAdvantage * 4.0f) + leashScore + maneuverBonus + coreSeparation + sanctuaryPenalty;
+                // ШТРАФ ЗА ПРИЖИМАНИЕ К СТЕНАМ (X == 0, X == 14, Y >= 10):
+                // Пикинер обязан кружить в открытом пространстве (X: 2..12, Y: 4..9), огибая (7, 7)!
+                float borderPenalty = 0.0f;
+                if (targetCoord.x == 0 || targetCoord.x >= 14 || targetCoord.y >= 10)
+                {
+                    borderPenalty = -100.0f;
+                }
+                else if (targetCoord.x >= 2 && targetCoord.x <= 11 && targetCoord.y >= 4 && targetCoord.y <= 9)
+                {
+                    borderPenalty = 40.0f;
+                }
+
+                eval.baitScore = (aggroAdvantage * 4.0f) + leashScore + maneuverBonus + coreSeparation + sanctuaryPenalty + borderPenalty;
             }
         }
     }
