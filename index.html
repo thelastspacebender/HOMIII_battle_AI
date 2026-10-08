@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoMM3 Combat AI — Нейро-символический Тактический Движок (VCMI + C++20)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- ВЕРХНЯЯ ШАПКА -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-shield">⚔️</div>
+                <div>
+                    <h1 class="header-title">HoMM3 Combat AI <span class="badge-tag">C++20 & NES Hybrid</span></h1>
+                    <p class="header-subtitle">Сценарий «Погост»: 15 Лучников + 2 Пикинера-приманки vs 35 Зомби (Безупречная победа 0 потерь)</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-pill connected" id="engineStatusPill">
+                    <span class="status-dot"></span>
+                    <span id="engineStatusText">C++ ДВИЖОК ПОДКЛЮЧЕН</span>
+                </div>
+                <div class="round-counter">
+                    <span class="round-label">РАУНД</span>
+                    <span class="round-val" id="roundVal">1</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ОСНОВНОЙ КОНТЕНТ: СЕТКА ИЗ 3 КОЛОНОК -->
+        <main class="main-layout">
+            <!-- ЛЕВАЯ КОЛОНКА: КАРТА ПОЛЯ БОЯ (CANVAS) -->
+            <section class="battlefield-section">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span>🗺️ Поле боя HoMM3</span>
+                        <span class="hex-count-badge">11 × 15 (165 гексов)</span>
+                    </div>
+                    <div class="mode-toggles">
+                        <button class="mode-btn active" id="btnModeBot" onclick="setMode('bot')">Против BattleAI (Бот)</button>
+                        <button class="mode-btn" id="btnModeHuman" onclick="setMode('human')">Против Человека</button>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="battleCanvas" width="940" height="600"></canvas>
+                    <div class="floating-overlay" id="combatNotice"></div>
+                </div>
+
+                <!-- НИЖНЯЯ ПАНЕЛЬ УПРАВЛЕНИЯ -->
+                <div class="control-toolbar">
+                    <button class="btn btn-primary" id="btnStep" onclick="stepTurn()">
+                        <span class="btn-icon">▶</span> Шаг хода (Step)
+                    </button>
+                    <button class="btn btn-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
+                        <span class="btn-icon">⏩</span> <span id="autoPlayLabel">Авто-бой (Play)</span>
+                    </button>
+                    <button class="btn btn-danger" id="btnReset" onclick="resetBattle()">
+                        <span class="btn-icon">🔄</span> Рестарт
+                    </button>
+                    <button class="btn btn-accent" id="btnTrain" onclick="startTraining()">
+                        <span class="btn-icon">⚡</span> Обучить Adam
+                    </button>
+                    <select id="trainEpochsSelect" style="background:#1e293b; color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:6px 10px; font-family:'JetBrains Mono';">
+                        <option value="10">10 эпох</option>
+                        <option value="25" selected>25 эпох</option>
+                        <option value="50">50 эпох</option>
+                        <option value="100">100 эпох</option>
+                    </select>
+                    <div class="speed-slider-wrap">
+                        <label for="speedSelect">Скорость:</label>
+                        <select id="speedSelect" onchange="changeSpeed(this.value)">
+                            <option value="600">1x (600ms)</option>
+                            <option value="300" selected>2x (300ms)</option>
+                            <option value="120">5x (120ms)</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ПРАВАЯ КОЛОНКА: ДАШБОРД ВЕСОВ И ТЕРМИНАЛ ЛОГОВ -->
+            <aside class="sidebar-section">
+                <!-- ПАНЕЛЬ 1: ДИНАМИЧЕСКИЕ ВЕСА W(t) -->
+                <div class="panel weights-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">🧠 Динамические веса нейромодулятора W(t)</div>
+                        <span class="weights-mode-badge" id="weightsModeBadge">BattleAI Head</span>
+                    </div>
+                    <div class="weights-list">
+                        <div class="weight-item">
+                            <div class="weight-meta">
+                                <span class="weight-name"><span class="color-dot dot-green"></span> Байт / Отвод зомби (Bait)</span>
+                                <span class="weight-val" id="valBait">5.01</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill fill-green" id="barBait" style="width: 85%;"></div></div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-meta">
+                                <span class="weight-name"><span class="color-dot dot-cyan"></span> Кайт / Разрыв дистанции (Kite)</span>
+                                <span class="weight-val" id="valKite">4.02</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill fill-cyan" id="barKite" style="width: 70%;"></div></div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-meta">
+                                <span class="weight-name"><span class="color-dot dot-gold"></span> Срыв ответки единичкой (Strip Retal)</span>
+                                <span class="weight-val" id="valStrip">3.05</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill fill-gold" id="barStrip" style="width: 55%;"></div></div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-meta">
+                                <span class="weight-name"><span class="color-dot dot-purple"></span> Прикрытие стрелка (Screen Core)</span>
+                                <span class="weight-val" id="valScreen">1.70</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill fill-purple" id="barScreen" style="width: 35%;"></div></div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-meta">
+                                <span class="weight-name"><span class="color-dot dot-red"></span> Множитель урона (Damage)</span>
+                                <span class="weight-val" id="valDmg">2.13</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill fill-red" id="barDmg" style="width: 45%;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ПАНЕЛЬ 2: ГРАФИК ОБУЧЕНИЯ NES -->
+                <div class="panel training-chart-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">📈 Прогресс обучения NES + Adam</div>
+                        <span class="epoch-badge" id="epochBadge">Эпоха: Готов</span>
+                    </div>
+                    <canvas id="chartCanvas" width="400" height="130"></canvas>
+                </div>
+
+                <!-- ПАНЕЛЬ 3: КОНСОЛЬ C++ ДВИЖКА -->
+                <div class="panel console-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">💻 Логи C++ VCMI движка</div>
+                        <button class="clear-btn" onclick="clearConsole()">Очистить</button>
+                    </div>
+                    <div class="console-body" id="consoleBody">
+                        <div class="log-line log-system">[SYSTEM] Инициализация C++20 ядра боя...</div>
+                        <div class="log-line log-info">[ENGINE] Сценарий загружен: 15 Лучников (Замок), 2 Пикинера, 35 Зомби.</div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
